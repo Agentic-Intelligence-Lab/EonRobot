@@ -1,4 +1,4 @@
-# Copyright (c) 2022-2026, The Isaac Lab Project Developers (https://github.com/isaac-sim/IsaacLab/blob/main/CONTRIBUTORS.md).
+# Copyright (c) 2022-2025, The Isaac Lab Project Developers (https://github.com/isaac-sim/IsaacLab/blob/main/CONTRIBUTORS.md).
 # All rights reserved.
 #
 # SPDX-License-Identifier: BSD-3-Clause
@@ -156,6 +156,19 @@ class Hole8mm(FixedAssetCfg):
     diameter = 0.0081
     height = 0.050896
     base_height = 0.0
+
+
+def apply_assembly_id(task_cfg: AssemblyTask, assembly_id: str) -> None:
+    """Update task config fields that depend on assembly_id."""
+    assembly_dir = f"{ASSET_DIR}/{assembly_id}/"
+    task_cfg.assembly_id = assembly_id
+    task_cfg.assembly_dir = assembly_dir
+    task_cfg.disassembly_path_json = f"{assembly_dir}/disassemble_traj.json"
+    task_cfg.eval_filename = f"evaluation_{assembly_id}.h5"
+    if hasattr(task_cfg, "fixed_asset"):
+        task_cfg.fixed_asset.spawn.usd_path = f"{assembly_dir}{task_cfg.fixed_asset_cfg.usd_path}"
+    if hasattr(task_cfg, "held_asset"):
+        task_cfg.held_asset.spawn.usd_path = f"{assembly_dir}{task_cfg.held_asset_cfg.usd_path}"
 
 
 @configclass
