@@ -1,4 +1,4 @@
-# Copyright (c) 2022-2025, The Isaac Lab Project Developers (https://github.com/isaac-sim/IsaacLab/blob/main/CONTRIBUTORS.md).
+# Copyright (c) 2022-2026, The Isaac Lab Project Developers (https://github.com/isaac-sim/IsaacLab/blob/main/CONTRIBUTORS.md).
 # All rights reserved.
 #
 # SPDX-License-Identifier: BSD-3-Clause
@@ -33,23 +33,27 @@
 
 """IndustReal: algorithms module.
 
-Contains functions that implement Simulation-Aware Policy Update (SAPU), SDF-Based Reward, and Sampling-Based Curriculum (SBC).
+Contains functions that implement:
+
+- Simulation-Aware Policy Update (SAPU)
+- SDF-Based Reward
+- Sampling-Based Curriculum (SBC)
 
 Not intended to be executed as a standalone script.
 """
 
 # Force garbage collection for large arrays
 import gc
+
 import numpy as np
-import os
 
 # from pysdf import SDF
 import torch
 import trimesh
-from trimesh.exchange.load import load
 
 # from urdfpy import URDF
 import warp as wp
+from trimesh.exchange.load import load
 
 from isaaclab.utils.assets import retrieve_file_path
 
@@ -60,12 +64,10 @@ Simulation-Aware Policy Update (SAPU)
 
 def load_asset_mesh_in_warp(held_asset_obj, fixed_asset_obj, num_samples, device):
     """Create mesh objects in Warp for all environments."""
-    retrieve_file_path(held_asset_obj, download_dir="./")
-    plug_trimesh = load(os.path.basename(held_asset_obj))
-    # plug_trimesh = load(held_asset_obj)
-    retrieve_file_path(fixed_asset_obj, download_dir="./")
-    socket_trimesh = load(os.path.basename(fixed_asset_obj))
-    # socket_trimesh = load(fixed_asset_obj)
+    held_asset_local = retrieve_file_path(held_asset_obj, download_dir="./")
+    plug_trimesh = load(held_asset_local)
+    fixed_asset_local = retrieve_file_path(fixed_asset_obj, download_dir="./")
+    socket_trimesh = load(fixed_asset_local)
 
     plug_wp_mesh = wp.Mesh(
         points=wp.array(plug_trimesh.vertices, dtype=wp.vec3, device=device),
@@ -105,7 +107,6 @@ def get_sdf_reward(
     sdf_reward = torch.zeros((num_envs,), dtype=torch.float32, device=device)
 
     for i in range(num_envs):
-
         # Create copy of plug mesh
         mesh_points = wp.clone(wp_plug_mesh.points)
         mesh_indices = wp.clone(wp_plug_mesh.indices)
@@ -230,7 +231,7 @@ def check_plug_close_to_socket(keypoints_plug, keypoints_socket, dist_threshold,
     """Check if plug is close to socket."""
 
     # Compute keypoint distance between plug and socket
-    keypoint_dist = torch.norm(keypoints_socket - keypoints_plug, p=2, dim=-1)
+    keypoint_dist = torch.linalg.norm(keypoints_socket - keypoints_plug, ord=2, dim=-1)
 
     # Check if keypoint distance is below threshold
     is_plug_close_to_socket = torch.where(

@@ -1,18 +1,20 @@
-# Copyright (c) 2022-2025, The Isaac Lab Project Developers (https://github.com/isaac-sim/IsaacLab/blob/main/CONTRIBUTORS.md).
+# Copyright (c) 2022-2026, The Isaac Lab Project Developers (https://github.com/isaac-sim/IsaacLab/blob/main/CONTRIBUTORS.md).
 # All rights reserved.
 #
 # SPDX-License-Identifier: BSD-3-Clause
 
+from isaaclab_physx.physics import PhysxCfg
+
 import isaaclab.sim as sim_utils
-from isaaclab.actuators.actuator_cfg import ImplicitActuatorCfg
+from isaaclab.actuators import ImplicitActuatorCfg
 from isaaclab.assets import ArticulationCfg
 from isaaclab.envs import DirectRLEnvCfg
 from isaaclab.scene import InteractiveSceneCfg
-from isaaclab.sim import PhysxCfg, SimulationCfg
+from isaaclab.sim import SimulationCfg
 from isaaclab.sim.spawners.materials.physics_materials_cfg import RigidBodyMaterialCfg
 from isaaclab.utils import configclass
 
-from .disassembly_tasks_cfg import ASSET_DIR, Extraction
+from .assembly_tasks_cfg import ASSET_DIR, Insertion
 
 OBS_DIM_CFG = {
     "joint_pos": 7,
@@ -50,7 +52,7 @@ class CtrlCfg:
     pos_action_bounds = [0.1, 0.1, 0.1]
     rot_action_bounds = [0.01, 0.01, 0.01]
 
-    pos_action_threshold = [0.01, 0.01, 0.01]
+    pos_action_threshold = [0.1, 0.1, 0.1]
     rot_action_threshold = [0.01, 0.01, 0.01]
 
     reset_joints = [0.0, 0.0, 0.0, -1.870, 0.0, 1.8675, 0.785398]
@@ -68,7 +70,7 @@ class CtrlCfg:
 
 
 @configclass
-class DisassemblyEnvCfg(DirectRLEnvCfg):
+class AssemblyEnvCfg(DirectRLEnvCfg):
     decimation = 8
     action_space = 6
     # num_*: will be overwritten to correspond to obs_order, state_order.
@@ -96,8 +98,8 @@ class DisassemblyEnvCfg(DirectRLEnvCfg):
         "delta_pos",
     ]
 
-    task_name: str = "extraction"  # peg_insertion, gear_meshing, nut_threading
-    tasks: dict = {"extraction": Extraction()}
+    task_name: str = "insertion"  # peg_insertion, gear_meshing, nut_threading
+    tasks: dict = {"insertion": Insertion()}
     obs_rand: ObsRandCfg = ObsRandCfg()
     ctrl: CtrlCfg = CtrlCfg()
 
@@ -107,7 +109,7 @@ class DisassemblyEnvCfg(DirectRLEnvCfg):
         device="cuda:0",
         dt=1 / 120,
         gravity=(0.0, 0.0, -9.81),
-        physx=PhysxCfg(
+        physics=PhysxCfg(
             solver_type=1,
             max_position_iteration_count=192,  # Important to avoid interpenetration.
             max_velocity_iteration_count=1,
@@ -130,7 +132,8 @@ class DisassemblyEnvCfg(DirectRLEnvCfg):
         prim_path="/World/envs/env_.*/Robot",
         spawn=sim_utils.UsdFileCfg(
             usd_path=f"{ASSET_DIR}/franka_mimic.usd",
-            activate_contact_sensors=True,
+            # usd_path=f'{ASSET_DIR}/automate_franka.usd',
+            activate_contact_sensors=False,
             rigid_props=sim_utils.RigidBodyPropertiesCfg(
                 disable_gravity=True,
                 max_depenetration_velocity=5.0,
@@ -162,7 +165,7 @@ class DisassemblyEnvCfg(DirectRLEnvCfg):
                 "panda_finger_joint2": 0.04,
             },
             pos=(0.0, 0.0, 0.0),
-            rot=(1.0, 0.0, 0.0, 0.0),
+            rot=(0.0, 0.0, 0.0, 1.0),
         ),
         actuators={
             "panda_arm1": ImplicitActuatorCfg(
@@ -194,3 +197,6 @@ class DisassemblyEnvCfg(DirectRLEnvCfg):
             ),
         },
     )
+    # contact_sensor: ContactSensorCfg = ContactSensorCfg(
+    #     prim_path="/World/envs/env_.*/Robot/.*", update_period=0.0, history_length=1, debug_vis=True
+    # )
