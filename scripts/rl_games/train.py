@@ -33,9 +33,10 @@ from isaaclab.utils.io import dump_yaml
 
 from isaaclab_rl.rl_games import MultiObserver, PbtAlgoObserver, RlGamesGpuEnv, RlGamesVecEnvWrapper
 
-import automate  # noqa: F401
-from automate.assembly_runtime import assembly_log_name, set_assembly_runtime
 from isaaclab_tasks.utils import add_launcher_args, launch_simulation, resolve_task_config
+
+import automate  # noqa: F401
+from automate.assembly_runtime import assembly_log_name, configure_assembly, ensure_local_automate_registered
 
 logger = logging.getLogger(__name__)
 
@@ -90,7 +91,7 @@ def main():
     """Train with RL-Games agent."""
     env_cfg, agent_cfg = resolve_task_config(args_cli.task, args_cli.agent)
     if args_cli.assembly_id is not None:
-        set_assembly_runtime(args_cli.assembly_id, if_sbc=True, if_logging_eval=args_cli.log_eval)
+        configure_assembly(env_cfg, args_cli.assembly_id, if_sbc=True, if_logging_eval=args_cli.log_eval)
         agent_cfg["params"]["config"]["name"] = assembly_log_name(args_cli.assembly_id)
     with launch_simulation(env_cfg, args_cli):
         # override configurations with non-hydra CLI arguments
@@ -171,6 +172,8 @@ def main():
 
         # set the log directory for the environment
         env_cfg.log_dir = os.path.join(log_root_path, log_dir)
+
+        ensure_local_automate_registered()
 
         # create isaac environment
         env = gym.make(args_cli.task, cfg=env_cfg, render_mode="rgb_array" if args_cli.video else None)

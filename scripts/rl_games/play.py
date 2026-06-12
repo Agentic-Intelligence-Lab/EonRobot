@@ -30,9 +30,10 @@ from isaaclab.utils.dict import print_dict
 from isaaclab_rl.rl_games import RlGamesGpuEnv, RlGamesVecEnvWrapper
 from isaaclab_rl.utils.pretrained_checkpoint import get_published_pretrained_checkpoint
 
-import automate  # noqa: F401
-from automate.assembly_runtime import assembly_log_name, set_assembly_runtime
 from isaaclab_tasks.utils import add_launcher_args, get_checkpoint_path, launch_simulation, resolve_task_config
+
+import automate  # noqa: F401
+from automate.assembly_runtime import assembly_log_name, configure_assembly, ensure_local_automate_registered
 
 # PLACEHOLDER: Extension template (do not remove this comment)
 with contextlib.suppress(ImportError):
@@ -78,7 +79,7 @@ def main():
     """Play with RL-Games agent."""
     env_cfg, agent_cfg = resolve_task_config(args_cli.task, args_cli.agent)
     if args_cli.assembly_id is not None:
-        set_assembly_runtime(args_cli.assembly_id, if_sbc=False, if_logging_eval=args_cli.log_eval)
+        configure_assembly(env_cfg, args_cli.assembly_id, if_sbc=False, if_logging_eval=args_cli.log_eval)
         agent_cfg["params"]["config"]["name"] = assembly_log_name(args_cli.assembly_id)
     with launch_simulation(env_cfg, args_cli):
         # grab task name for checkpoint path
@@ -126,6 +127,8 @@ def main():
         clip_actions = agent_cfg["params"]["env"].get("clip_actions", math.inf)
         obs_groups = agent_cfg["params"]["env"].get("obs_groups")
         concate_obs_groups = agent_cfg["params"]["env"].get("concate_obs_groups", True)
+
+        ensure_local_automate_registered()
 
         # create isaac environment
         env = gym.make(args_cli.task, cfg=env_cfg, render_mode="rgb_array" if args_cli.video else None)

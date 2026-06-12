@@ -15,22 +15,12 @@
 
 CUDA_ID=0
 for id in '00004' '00007' '00014' '00015' '00016' '00021' '00028' '00030' '00032' '00042'; do
-    CUDA_VISIBLE_DEVICES=$CUDA_ID python scripts/rl_games/train.py \
-        --task=Isaac-AutoMate-Assembly-Direct-v0 \
-        --assembly_id=$id \
-        --num_envs=128 \
-        --max_iterations=1500 \
-        > logs/train_assembly_$id.log 2>&1 &
+    CUDA_VISIBLE_DEVICES=$CUDA_ID python scripts/rl_games/train.py --task=Isaac-AutoMate-Assembly-Direct-v0 --assembly_id=$id > logs/train_assembly_$id.log 2>&1 &
     CUDA_ID=$((CUDA_ID + 1))
 done
 
 CUDA_ID=0
 for id in '00062' '00074' '00077' '00078' '00081' '00083' '00103' '00110' '00117' '00133'; do
-    CUDA_VISIBLE_DEVICES=$CUDA_ID python scripts/rl_games/train.py \
-        --task=Isaac-AutoMate-Assembly-Direct-v0 \
-        --assembly_id=$id \
-        --num_envs=128 \
-        --max_iterations=1500 \
-        > logs/train_assembly_$id.log 2>&1 &
+    CUDA_VISIBLE_DEVICES=$CUDA_ID python scripts/rl_games/train.py --task=Isaac-AutoMate-Assembly-Direct-v0 --assembly_id=$id > logs/train_assembly_$id.log 2>&1 &
     CUDA_ID=$((CUDA_ID + 1))
 done
