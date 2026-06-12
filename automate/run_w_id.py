@@ -5,13 +5,50 @@
 
 import argparse
 import os
+import re
 import subprocess
 import sys
 
 
+def update_task_param(task_cfg, assembly_id, if_sbc, if_log_eval):
+    # Read the file lines.
+    with open(task_cfg) as f:
+        lines = f.readlines()
+
+    updated_lines = []
+
+    # Regex patterns to capture the assignment lines
+    assembly_pattern = re.compile(r"^(.*assembly_id\s*=\s*).*$")
+    if_sbc_pattern = re.compile(r"^(.*if_sbc\s*:\s*bool\s*=\s*).*$")
+    if_log_eval_pattern = re.compile(r"^(.*if_logging_eval\s*:\s*bool\s*=\s*).*$")
+    eval_file_pattern = re.compile(r"^(.*eval_filename\s*:\s*str\s*=\s*).*$")
+
+    for line in lines:
+        if "assembly_id =" in line:
+            line = assembly_pattern.sub(rf"\1'{assembly_id}'", line)
+        elif "if_sbc: bool =" in line:
+            line = if_sbc_pattern.sub(rf"\1{str(if_sbc)}", line)
+        elif "if_logging_eval: bool =" in line:
+            line = if_log_eval_pattern.sub(rf"\1{str(if_log_eval)}", line)
+        elif "eval_filename: str = " in line:
+            line = eval_file_pattern.sub(r"\1'{}'".format(f"evaluation_{assembly_id}.h5"), line)
+
+        updated_lines.append(line)
+
+    # Write the modified lines back to the file.
+    with open(task_cfg, "w") as f:
+        f.writelines(updated_lines)
+
+
 def main():
-    parser = argparse.ArgumentParser(description="Run assembly training/evaluation for a given assembly_id.")
-    parser.add_argument("--assembly_id", type=str, required=True, help="Assembly ID to use.")
+    parser = argparse.ArgumentParser(description="Update assembly_id and run training script.")
+    parser.add_argument(
+        "--cfg_path",
+        type=str,
+        help="Path to the file containing assembly_id.",
+        default="source/isaaclab_tasks/isaaclab_tasks/direct/automate/assembly_tasks_cfg.py",
+    )
+    parser.add_argument("--assembly_id", type=str, help="New assembly ID to set.")
     parser.add_argument("--checkpoint", type=str, help="Checkpoint path.")
     parser.add_argument("--num_envs", type=int, default=128, help="Number of parallel environment.")
     parser.add_argument("--seed", type=int, default=-1, help="Random seed.")
@@ -20,48 +57,40 @@ def main():
     parser.add_argument("--max_iterations", type=int, default=1500, help="Number of iteration for policy learning.")
     args = parser.parse_args()
 
-    # Per-process overrides avoid clobbering shared config files when launching many jobs.
+    update_task_param(args.cfg_path, args.assembly_id, args.train, args.log_eval)
+
+    # avoid the warning of low GPU occupancy for SoftDTWCUDA function
     env = os.environ.copy()
     env["NUMBA_CUDA_LOW_OCCUPANCY_WARNINGS"] = "0"
-    env["AUTOMATE_ASSEMBLY_ID"] = args.assembly_id
-    env["AUTOMATE_IF_SBC"] = str(args.train)
-    env["AUTOMATE_IF_LOG_EVAL"] = str(args.log_eval)
 
-    # if sys.platform.startswith("win"):
-    #     command = ["isaaclab.bat"]
-    # else:
-    #     command = ["./isaaclab.sh"]
+    # build the command
+    if sys.platform.startswith("win"):
+        command = ["isaaclab.bat"]
+    else:
+        command = ["./isaaclab.sh"]
 
-    # command.append("-p")
-    command = []
+    command.append("-p")
 
     if args.train:
         command.extend(
             [
-                "python",
-                "/home/ps/code/IsaacLab-3.0.0-beta/scripts/reinforcement_learning/rl_games/train.py",
-                "--headless",
+                "scripts/reinforcement_learning/rl_games/train.py",
                 "--task=Isaac-AutoMate-Assembly-Direct-v0",
                 f"--seed={args.seed}",
                 f"--max_iterations={args.max_iterations}",
-                f"agent.params.config.name=Assembly_{args.assembly_id}",
             ]
         )
     else:
         if not args.checkpoint:
             raise ValueError("No checkpoint provided for evaluation.")
-        command.extend(
-            [
-                "/home/ps/code/IsaacLab-3.0.0-beta/source/scripts/reinforcement_learning/rl_games/play.py",
-                "--task=Isaac-AutoMate-Assembly-Direct-v0",
-            ]
-        )
+        command.extend(["scripts/reinforcement_learning/rl_games/play.py", "--task=Isaac-AutoMate-Assembly-Direct-v0"])
 
     command.append(f"--num_envs={args.num_envs}")
 
     if args.checkpoint:
         command.append(f"--checkpoint={args.checkpoint}")
 
+    # Run the command
     subprocess.run(command, env=env, check=True)
 
 
